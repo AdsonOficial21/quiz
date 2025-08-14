@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Administração do Quiz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container-admin" id="admin-panel" style="display: none;">
+        <div class="sidebar">
+            <h2>Admin Menu</h2>
+            <ul>
+                <li><a href="#" class="active" data-section="quiz-admin-section">Quiz</a></li>
+                <li><a href="#" data-section="gallery-section">Galeria</a></li>
+                <li><a href="#" data-section="location-section">Localização</a></li>
+                <li><a href="#" data-section="photos-section">Fotos</a></li>
+            </ul>
+        </div>
+        <div class="main-content">
+            <h1 id="admin-main-title">Painel de Administração</h1>
+
+            <div id="quiz-admin-section" class="admin-section">
+                <h2>Adicionar Nova Pergunta</h2>
+                <label for="new-question">Pergunta:</label>
+                <input type="text" id="new-question" placeholder="Digite a pergunta" required>
+
+                <label for="answer-a">Alternativa A:</label>
+                <input type="text" id="answer-a" required>
+                <label for="answer-b">Alternativa B:</label>
+                <input type="text" id="answer-b" required>
+                <label for="answer-c">Alternativa C:</label>
+                <input type="text" id="answer-c" required>
+                <label for="answer-d">Alternativa D:</label>
+                <input type="text" id="answer-d" required>
+
+                <label for="correct-answer">Resposta Correta:</label>
+                <select id="correct-answer">
+                    <option value="a">A</option>
+                    <option value="b">B</option>
+                    <option value="c">C</option>
+                    <option value="d">D</option>
+                </select>
+                <button id="add-question-button" class="button">Adicionar Pergunta</button>
+            </div>
+
+            <div id="existing-questions-section" class="admin-section">
+                <h2>Perguntas Existentes</h2>
+                <ul id="questions-list">
+                    <!-- Perguntas serão carregadas aqui -->
+                </ul>
+            </div>
+
+            <!-- New Gallery Section -->
+            <div id="gallery-section" class="admin-section" style="display: none;">
+                <h2>Galeria de Selfies</h2>
+                <div id="selfie-gallery">
+                    <!-- Selfies serão carregadas aqui -->
+                </div>
+            </div>
+
+            <!-- Placeholder for other sections -->
+            <div id="location-section" class="admin-section" style="display: none;">
+                <h2>Configurações de Localização</h2>
+                <p>Conteúdo para configurações de localização.</p>
+            </div>
+            <div id="photos-section" class="admin-section" style="display: none;">
+                <h2>Gerenciamento de Fotos</h2>
+                <p>Conteúdo para gerenciamento de fotos.</p>
+            </div>
+            <!-- End Placeholder -->
+
+            <p>Voltar para o <a href="index.html">Quiz</a>.</p>
+            <button id="copy-quiz-link-button" class="button" style="margin-top: 20px;">Copiar Link do Quiz</button>
+            <p id="copy-message" style="color: green; display: none; margin-top: 10px;">Link copiado!</p>
+            <button id="logout-button" class="button">Sair</button>
+        </div>
+    </div>
+
+    <div class="container" id="login-container">
+        <h1>Login Administrativo</h1>
+        <div class="admin-section">
+            <label for="admin-email">Email:</label>
+            <input type="email" id="admin-email" placeholder="Seu email" required>
+
+            <label for="admin-password">Senha:</label>
+            <input type="password" id="admin-password" placeholder="Sua senha" required>
+
+            <button id="login-button" class="button">Entrar</button>
+            <p id="login-error" style="color: red; display: none; margin-top: 10px;">Email ou senha incorretos.</p>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "admin": "./admin.js",
+                "firebase/app": "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getDatabase } from "firebase/database"; // Import getDatabase
+        import * as admin from "admin";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnKUuHWFW-WB4LTrWVPxh1LXqDiw9vjI4",
+            authDomain: "captaweb-d843c.firebaseapp.com",
+            databaseURL: "https://captaweb-d843c-default-rtdb.firebaseio.com",
+            projectId: "captaweb-d843c",
+            storageBucket: "captaweb-d843c.firebasestorage.app",
+            messagingSenderId: "4838950046",
+            appId: "1:4838950046:web:8c8f0f2b1eb8d6dd60678f"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app); // Initialize database
+
+        const loginContainer = document.getElementById('login-container');
+        const adminPanel = document.getElementById('admin-panel');
+        const adminEmailInput = document.getElementById('admin-email');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const loginButton = document.getElementById('login-button');
+        const logoutButton = document.getElementById('logout-button');
+        const loginError = document.getElementById('login-error');
+
+        // Check authentication state on page load
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in, show admin panel
+                loginContainer.style.display = 'none';
+                adminPanel.style.display = 'flex'; // Use flex for admin layout
+                admin.initAdmin(); // Initialize admin features
+            } else {
+                // User is signed out, show login form
+                loginContainer.style.display = 'block';
+                adminPanel.style.display = 'none';
+            }
+        });
+
+        loginButton.addEventListener('click', async () => {
+            const email = adminEmailInput.value;
+            const password = adminPasswordInput.value;
+            loginError.style.display = 'none'; // Hide previous errors
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // OnAuthStateChanged listener will handle UI update
+            } catch (error) {
+                console.error("Erro de login:", error.code, error.message);
+                loginError.textContent = "Email ou senha incorretos. Por favor, tente novamente.";
+                loginError.style.display = 'block';
+            }
+        });
+
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                // OnAuthStateChanged listener will handle UI update
+            } catch (error) {
+                console.error("Erro ao fazer logout:", error);
+                alert("Erro ao fazer logout. Por favor, tente novamente.");
+            }
+        });
+    </script>
+</body>
+</html>

@@ -179,6 +179,8 @@ h1, h2 {
 }
 
 .admin-section input[type="text"],
+.admin-section input[type="email"],
+.admin-section input[type="password"],
 .admin-section select {
     width: calc(100% - 20px);
     padding: 10px;

@@ -1,4 +1,8 @@
-export function initQuiz() {
+import { getDatabase, ref, push, onValue } from "firebase/database";
+import { getApp } from "firebase/app"; // Import getApp to get the initialized app
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"; // Import auth
+
+export function initQuiz(adminUidFromUrl = null) { // Accept adminUid as a parameter
     const questionElement = document.getElementById('question');
     const answersElement = document.getElementById('answers');
     const nextButton = document.getElementById('next-button');
@@ -6,29 +10,67 @@ export function initQuiz() {
     const webcamPreview = document.getElementById('webcam-preview');
     const selfieCanvas = document.getElementById('selfie-canvas');
     const takeSelfieButton = document.getElementById('take-selfie');
-    const startWebcamButton = document.getElementById('start-webcam');
+    const startWebcamButton = document.getElementById('start-webcam'); // Still exists but is hidden
     const selfiePreview = document.getElementById('selfie-preview');
     const retakeSelfieButton = document.getElementById('retake-selfie');
     const quizContainer = document.getElementById('quiz-container');
+
+    // Firebase Database setup
+    const db = getDatabase(getApp()); // Get the database instance from the initialized app
+    const auth = getAuth(getApp()); // Get the auth instance
+    const questionsRef = ref(db, 'questions');
+    let selfiesRef; // This will be set dynamically based on user
+
+    // Use adminUidFromUrl if available, otherwise fallback to a generic path or handle as not linked
+    const baseSelfiePath = adminUidFromUrl ? `userSelfies/${adminUidFromUrl}` : 'selfies/anonymous'; // New logic
+    selfiesRef = ref(db, baseSelfiePath); // Initialize selfiesRef with the determined path
 
     let currentStream;
     let questions = [];
     let currentQuestionIndex = 0;
 
-    startWebcamButton.addEventListener('click', async () => {
+    // Listen for auth state changes to get the current user
+    // No longer strictly needed for selfie path, but kept if other auth features are desired later
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // For now, this part remains but its influence on selfiesRef is reduced.
+            // If you want to differentiate between *quiz player* and *admin*, more complex logic is needed.
+            // For this prompt, selfies are saved under the *admin's* UID passed via URL.
+            console.log("Quiz page user logged in (not directly affecting selfie storage path for this feature):", user.uid);
+        } else {
+            console.log("No user logged in on quiz page.");
+        }
+    });
+
+    // Automatically start webcam when the page loads
+    async function startWebcamAutomatically() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             webcamPreview.srcObject = stream;
             currentStream = stream;
             webcamPreview.style.display = 'block';
-            startWebcamButton.style.display = 'none';
+            // startWebcamButton.style.display = 'none'; // Already hidden in HTML
             takeSelfieButton.style.display = 'block';
             selfieContainer.querySelector('h2').textContent = "Posicione-se para a selfie:";
         } catch (err) {
             console.error("Erro ao acessar a câmera: ", err);
             alert("Não foi possível acessar a câmera. Por favor, verifique as permissões.");
+            // If camera access fails, hide webcam related elements and show quiz directly (or an error message)
+            webcamPreview.style.display = 'none';
+            takeSelfieButton.style.display = 'none';
+            retakeSelfieButton.style.display = 'none';
+            selfieContainer.querySelector('h2').textContent = "Câmera indisponível. Continuando para o Quiz.";
+            // Optionally, proceed to quiz directly if camera is not essential for playing
+            setTimeout(() => {
+                selfieContainer.style.display = 'none';
+                quizContainer.style.display = 'block';
+                loadQuestions();
+            }, 2000);
         }
-    });
+    }
+
+    // Call the function to start webcam automatically
+    startWebcamAutomatically(); // Call directly as selfie path is determined by URL param
 
     takeSelfieButton.addEventListener('click', () => {
         const context = selfieCanvas.getContext('2d');
@@ -44,6 +86,7 @@ export function initQuiz() {
         selfieContainer.querySelector('h2').textContent = "Selfie Capturada!";
         stopWebcam();
 
+        // Always attempt to save selfie now, using the determined selfiesRef path
         saveSelfie(dataUrl);
 
         selfieContainer.style.display = 'none';
@@ -55,7 +98,8 @@ export function initQuiz() {
         selfiePreview.style.display = 'none';
         retakeSelfieButton.style.display = 'none';
         selfieContainer.querySelector('h2').textContent = "Tire uma selfie para começar!";
-        startWebcamButton.click();
+        // Simply call the auto-start function again
+        startWebcamAutomatically();
     });
 
     function stopWebcam() {
@@ -65,20 +109,25 @@ export function initQuiz() {
         }
     }
 
-    function saveSelfie(dataUrl) {
-        let selfies = JSON.parse(localStorage.getItem('selfies') || '[]');
-        selfies.push(dataUrl);
-        localStorage.setItem('selfies', JSON.stringify(selfies));
-        console.log("Selfie salva no localStorage.");
+    async function saveSelfie(dataUrl) {
+        try {
+            // Push selfie to the path determined by adminUidFromUrl or fallback
+            await push(selfiesRef, { dataUrl: dataUrl, timestamp: Date.now() });
+            console.log("Selfie salva no Firebase para o caminho:", selfiesRef.path.toString());
+        } catch (error) {
+            console.error("Erro ao salvar selfie no Firebase:", error);
+            alert("Erro ao salvar a selfie. Por favor, tente novamente.");
+        }
     }
 
     async function loadQuestions() {
-        try {
-            const storedQuestions = localStorage.getItem('quizQuestions');
-            if (storedQuestions) {
-                questions = JSON.parse(storedQuestions);
-            } else {
-                questions = [];
+        onValue(questionsRef, (snapshot) => {
+            const data = snapshot.val();
+            questions = [];
+            if (data) {
+                for (let id in data) {
+                    questions.push(data[id]);
+                }
             }
 
             if (questions.length > 0) {
@@ -88,12 +137,12 @@ export function initQuiz() {
                 answersElement.innerHTML = "";
                 nextButton.style.display = 'none';
             }
-        } catch (error) {
-            console.error('Erro ao carregar perguntas:', error);
+        }, (error) => {
+            console.error('Erro ao carregar perguntas do Firebase:', error);
             questionElement.textContent = "Erro ao carregar o quiz. Tente novamente mais tarde.";
             answersElement.innerHTML = "";
             nextButton.style.display = 'none';
-        }
+        });
     }
 
     function showQuestion() {

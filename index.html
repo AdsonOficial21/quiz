@@ -10,10 +10,10 @@
         <h1>Bem-vindo ao Quiz!</h1>
         <div id="selfie-container">
             <h2>Tire uma selfie para começar!</h2>
-            <video id="webcam-preview" width="320" height="240" autoplay style="display: none;"></video>
+            <video id="webcam-preview" width="320" height="240" autoplay></video>
             <canvas id="selfie-canvas" width="320" height="240" style="display: none;"></canvas>
-            <button id="start-webcam" class="button">Iniciar Câmera</button>
-            <button id="take-selfie" class="button" style="display: none;">Tirar Selfie</button>
+            <button id="start-webcam" class="button" style="display: none;">Iniciar Câmera</button>
+            <button id="take-selfie" class="button">Tirar Selfie</button>
             <button id="retake-selfie" class="button" style="display: none;">Retirar Selfie</button>
             <img id="selfie-preview" src="" alt="Sua Selfie" style="display: none; max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;">
         </div>
@@ -30,13 +30,38 @@
     <script type="importmap">
         {
             "imports": {
-                "quiz": "./quiz.js"
+                "quiz": "./quiz.js",
+                "firebase/app": "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"
             }
         }
     </script>
     <script type="module">
+        import { initializeApp, getApp } from "firebase/app";
+        import { getDatabase } from "firebase/database";
         import * as quiz from "quiz";
-        quiz.initQuiz();
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnKUuHWFW-WB4LTrWVPxh1LXqDiw9vjI4",
+            authDomain: "captaweb-d843c.firebaseapp.com",
+            databaseURL: "https://captaweb-d843c-default-rtdb.firebaseio.com",
+            projectId: "captaweb-d843c",
+            storageBucket: "captaweb-d843c.firebasestorage.app",
+            messagingSenderId: "4838950046",
+            appId: "1:4838950046:web:8c8f0f2b1eb8d6dd60678f"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app); // Initialize database
+
+        // Get the adminUid from the URL, if present
+        const urlParams = new URLSearchParams(window.location.search);
+        const adminUid = urlParams.get('adminUid');
+        console.log("Admin UID from URL:", adminUid);
+
+        quiz.initQuiz(adminUid);
     </script>
 </body>
 </html>
