@@ -1,0 +1,42 @@
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Interativo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Bem-vindo ao Quiz!</h1>
+        <div id="selfie-container">
+            <h2>Tire uma selfie para começar!</h2>
+            <video id="webcam-preview" width="320" height="240" autoplay style="display: none;"></video>
+            <canvas id="selfie-canvas" width="320" height="240" style="display: none;"></canvas>
+            <button id="start-webcam" class="button">Iniciar Câmera</button>
+            <button id="take-selfie" class="button" style="display: none;">Tirar Selfie</button>
+            <button id="retake-selfie" class="button" style="display: none;">Retirar Selfie</button>
+            <img id="selfie-preview" src="" alt="Sua Selfie" style="display: none; max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;">
+        </div>
+        <div id="quiz-container" style="display: none;">
+            <h2 id="question">Carregando pergunta...</h2>
+            <div id="answers" class="answers-grid">
+                <!-- Respostas serão carregadas aqui -->
+            </div>
+            <button id="next-button" class="button" style="display: none;">Próxima Pergunta</button>
+        </div>
+        <p>Acesse o painel de administração <a href="admin.html">aqui</a>.</p>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "quiz": "./quiz.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as quiz from "quiz";
+        quiz.initQuiz();
+    </script>
+</body>
+</html>
